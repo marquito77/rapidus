@@ -1,0 +1,1 @@
+./mvdemo/cpp/bin/mvdemo data/media/mall.mp4 -c data/models/model_1class.cfg
