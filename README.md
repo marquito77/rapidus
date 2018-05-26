@@ -50,6 +50,10 @@ GPU=1, CUDA=1 and OPENCV=1
 To calculate the mAP of my 1-class model:
 `darknet/darknet detector map data/training/model_1class.data data/models/model_1class.cfg data/models/model_1class.weights`
 
+## Troubleshooting
+- If you get a python error "no module named _tkinter": `apt-get install python3-tk`
+- If you get an error during build of darknet "#include <opencv2/highgui.hpp> not found": change path to opencv2/highgui/highgui.hpp and try building again
+
 ## Acknowledgement
 Joseph Chet Redmon et al. for writing the deep learning framework [darknet](https://pjreddie.com/darknet/)
 AlexeyAB for making darknet [available for windows](https://github.com/AlexeyAB/darknet)
