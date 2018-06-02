@@ -1,0 +1,5 @@
+darknet/
+coco/
+__pycache__
+**/cpp/bin
+**/cpp/obj

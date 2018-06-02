@@ -1,0 +1,1 @@
+python3 mvdemo/python/mvdemo.py data/media/mall.mp4 data/models/rapidus-1.cfg

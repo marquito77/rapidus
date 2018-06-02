@@ -1,0 +1,5 @@
+classes= 10
+train  = coco/train2017_hagl10/_filelist.txt
+valid  = coco/val2017_hagl10/_filelist.txt
+names  = data/models/rapidus-hagl10.names
+backup = data/training/backup

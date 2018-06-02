@@ -30,6 +30,7 @@ struct MainArgs
     std::string graphFile;
     std::string namesFile;
     std::string sourceFile;
+    std::string outputFile;
     float       thresh;
     std::vector<std::string> classNames;
 };
@@ -67,6 +68,8 @@ void usage()
     printf("    -g: graph file\n");
     printf("        This is the movidius .graph file which\n");
     printf("        contains the model and weights for the NCS.\n");
+    printf("    -o: output file\n");
+    printf("        Processed images, videos or streams are saved into this file.\n");
     printf("    -t: threshold\n");
     printf("        Threshold for accepting/dismissing classification result.\n");
     printf("        It must be a floating point number between 0 and 1.\n");
@@ -358,23 +361,63 @@ static void visualize(const Mat& i_img, Mat& o_img,
 
     o_img = i_img.clone();
     //printf("imgW=%d imgH=%d\n", imgW, imgH);
-    Scalar color(255, 255, 255, 255);
+    Scalar whiteColor(255, 255, 255, 255);
+    Scalar blackColor(0, 0, 0, 255);
     char buff[64];
     snprintf(buff, sizeof(buff), "%.1f", fps);
+    putText(o_img, buff, Point(o_img.cols-50, 20), FONT_HERSHEY_SIMPLEX, 0.5, whiteColor);
     for (int i=0; i<(int)i_detections.size(); ++i) {
         DetectedObject det = i_detections[i];
+        Color clr = getColor(det.objType, g_yoloConfig.numClasses);
+        Scalar boxColor(clr.r, clr.g, clr.b, 255);
         rescaleDetection(det, i_scale);
         const char* className = g_mainArgs.classNames[det.objType].c_str();
 
         Rect r1(Point(det.left, det.top), Point(det.right, det.bottom));
         //printf("%d: bboxRect = (%d, %d, %d, %d)\n", i, r1.x, r1.y, r1.x+r1.width, r1.y+r1.height);
         Rect r2 = Rect(r1.x, r1.y-20, r1.width, 20);
-        rectangle(o_img, r1, color, 3);
-        rectangle(o_img, r2, color, 1);
+        rectangle(o_img, r1, boxColor, 3);
+        rectangle(o_img, r2, boxColor, CV_FILLED);
 
-        putText(o_img, className, Point(r1.x+5, r1.y-7), FONT_HERSHEY_SIMPLEX, 0.5, color);
-        putText(o_img, buff, Point(o_img.cols-50, 20), FONT_HERSHEY_SIMPLEX, 0.5, color);
+        putText(o_img, className, Point(r1.x+5, r1.y-7), FONT_HERSHEY_SIMPLEX, 0.5, blackColor, 2);
     }
+}
+
+class ImageWriter
+{
+public:
+    ImageWriter(const std::string& i_source, const std::string& o_output)
+    : m_filename(o_output)
+    {
+        //TODO: determine if source is image
+    }
+
+    void write(const Mat& i_img)
+    {
+        if (m_sourceIsImage) {
+            imwrite(m_filename, i_img);
+        } else {
+            if (!m_videoWriter.isOpened()) {
+                int fourcc = CV_FOURCC('D', 'I', 'V', 'X');
+                Size frameSize(i_img.rows, i_img.cols);
+                m_videoWriter.open(o_output, fourcc, 20, frameSize, 1);                
+            }
+
+            if (m_videoWriter.isOpened()) {
+                m_videoWriter.write(i_img)
+            }
+        }
+    }
+
+private:
+    bool m_sourceIsImage;
+    std::string m_filename;
+    VideoWriter m_videoWriter;
+};
+
+static void saveImage(const Mat& i_img, const std::string& i_source, const std::string& i_output)
+{
+
 }
 
 void thrdProvideImage()
@@ -409,7 +452,7 @@ bool parseArgs(int argc, char** argv)
 {
     int c;
     g_mainArgs.thresh = INVALID_THRESH;
-    while ((c = getopt(argc, argv, "c:g:n:t:")) != -1) {
+    while ((c = getopt(argc, argv, "c:g:n:o:t:")) != -1) {
         switch (c)
         {
             case 'c':
@@ -420,6 +463,9 @@ bool parseArgs(int argc, char** argv)
                 break;
             case 'n':
                 g_mainArgs.namesFile = optarg;
+                break;
+            case 'o':
+                g_mainArgs.outputFile = optarg;
                 break;
             case 't':
                 g_mainArgs.thresh = atof(optarg);
@@ -478,24 +524,6 @@ int main(int argc, char** argv)
     while(1) {
         double tStart = getTimeMs();
 
-#if 0        
-        ok = cap.read(img);
-        //img = imread(g_imageFile);
-        if (!ok) {
-            break;
-        }
-
-        ok = preprocess(img, imgScaled, scaleData);
-        if (!ok) {
-            break;          
-        } 
-
-        detect(imgScaled, results);
-        if (!ok) {
-            break;
-        }
-#endif
-
         const std::vector<half_t>& results = g_resultsSharedBuffer.get();
         ok = postprocess(results, detections);
         if (!ok) {
@@ -503,22 +531,17 @@ int main(int argc, char** argv)
         }
         const Mat& img = g_imgSharedBuffer.get();
         visualize(img, imgVis, detections, g_scaleData, fps);
+
+        if (!g_mainArgs.outputFile.empty()) {
+            saveImage(imgVis, false);
+        }
         
         //double tRend = getTimeMs();
         ok = g_renderer->render(imgVis);
         if (!ok) {
             break;
         }
-#if 0
-		if (!renderFB(imgVis)) {
-			break;
-		}
-		imshow(g_imageSource, imgVis);
-		char c = waitKey(1);
-		if (c==27 || c=='q') 
-			break;
 
-#endif
 		//printf("Time render: %.2fms\n", getTimeMs()-tRend);
         numFrames += 1;
         double t = getTimeMs();
@@ -531,12 +554,6 @@ int main(int argc, char** argv)
             numFrames = 0;
         }
 
-#if 0
-        for (int i=0; i<detections.size(); ++i) {
-            const DetectedObject& d = detections[i];
-            printf("%d: detRect = (%.3f, %.3f, %.3f, %.3f), detConf=%.6f\n", i, d.left, d.top, d.right, d.bottom, d.confidence);
-        }
-#endif
     }
     printf("Exit main loop\n");
 

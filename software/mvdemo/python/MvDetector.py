@@ -23,7 +23,7 @@ def createYoloDetector(numClasses, anchors):
                         NMS, TARGET_BLOCK_WD, anchors)
 
 class MvDetector():
-    mvnc.SetGlobalOption(mvnc.GlobalOption.LOG_LEVEL, 2)
+    mvnc.SetGlobalOption(mvnc.GlobalOption.LOG_LEVEL, 1)
     devices = mvnc.EnumerateDevices()
     devNum = len(devices)
     if len(devices) == 0:

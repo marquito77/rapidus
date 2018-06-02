@@ -1,3 +1,3 @@
 import rapidus as rpd
 
-rpd.downloadCoco("coco", True)
+rpd.downloadCoco("coco", valOnly=False)

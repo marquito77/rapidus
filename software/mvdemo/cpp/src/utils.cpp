@@ -58,3 +58,40 @@ bool readNamesFile(const std::string& i_filename, std::vector<std::string>& o_cl
 
 	return true;
 }
+
+static std::vector<Color> g_colors;
+float baseColors[6][3] = { {1,0,1}, {0,0,1},{0,1,1},{0,1,0},{1,1,0},{1,0,0} };
+static float get_color(int c, int x, int max)
+{
+    float ratio = ((float)x/max)*5;
+    int i = floor(ratio);
+    int j = ceil(ratio);
+    ratio -= i;
+    float r = (1-ratio) * baseColors[i][c] + ratio*baseColors[j][c];
+    //printf("%f\n", r);
+    return (uint8_t)(r*255.);
+}
+
+static void initColors(int numClasses)
+{
+    //for classId in range(numClasses):
+    g_colors.clear();
+    for (int classId=0; classId<numClasses; ++classId) {
+        int offset = (classId*123457) % numClasses;
+        Color color;
+        color.r = get_color(2, offset, numClasses);
+        color.g = get_color(1, offset, numClasses);
+        color.b = get_color(0, offset, numClasses);
+
+        g_colors.push_back(color);
+    }
+}
+
+Color getColor(int classId, int numClasses)
+{
+    if ((int)g_colors.size() != numClasses) {
+        initColors(numClasses);
+    }
+
+    return g_colors[classId % g_colors.size()];
+}

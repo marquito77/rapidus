@@ -1,5 +1,0 @@
-classes= 1
-train  = coco/train2017_1class/_filelist.txt
-valid  = coco/val2017_1class/_filelist.txt
-names  = coco/val2017_1class/_classes.names
-backup = data/training/backup

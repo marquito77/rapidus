@@ -32,7 +32,7 @@ def cfgGetVal(cfgfile, section, value):
                     ret.append(val)
                 if len(ret) == 1:
                     ret = ret[0]
-                print("cfgGetVal(): {}/{} = {}".format(section, value, ret))
+                #print("cfgGetVal(): {}/{} = {}".format(section, value, ret))
                 return ret
     print("Error: Could not find section/val ({}/{}) in file {}".format(section, value, cfgfile))
     return None
@@ -47,13 +47,14 @@ class BBox(object):
         self.objType    = classId
         self.name       = className
 
-def convertToBBoxes(results, offx, offy, xscale, yscale, imgw, imgh, classNames):
+def convertToBBoxes(results, scalingData, classNames):
     boxes = []
+    [ox, oy, sx, sy] = scalingData
     for res in results:
-        l = int(res.left*imgw / xscale)-offx
-        r = int(res.right*imgw / xscale)-offx
-        t = int(res.top*imgh / yscale)-offy
-        b = int(res.bottom*imgh / yscale)-offy
+        l = int(res.left*sx)-ox
+        r = int(res.right*sx)-ox
+        t = int(res.top*sy)-oy
+        b = int(res.bottom*sy)-oy
         c = res.confidence
         o = res.objType
         n = classNames[o]
@@ -89,8 +90,10 @@ def prepareImage(img, dim):
     ox = int(offx*imgw/neww)
     oy = int(offy*imgh/newh)
     sx = neww/dim[0]
+    sx = imgw/sx
     sy = newh/dim[1]
-    return im, ox, oy, sx, sy
+    sy = imgh/sy
+    return im, [ox, oy, sx, sy]
 
 def prepareImage2(img, dim):
     im = cv2.resize(img, dim, cv2.INTER_LINEAR)
@@ -104,10 +107,10 @@ def prepareImage2(img, dim):
     sy = 1.
     return im, ox, oy, sx, sy
 
-def visualize(img, result, fps):
-    img = Visualize.Visualize(img, result)
-    img = cv2.putText(img, "%.2ffps" % fps, (70, 50), 
-        cv2.FONT_HERSHEY_SIMPLEX, 0.8, (0, 0, 0), 2)
+def visualize(img, result, fps, numClasses):
+    img = Visualize.Visualize(img, result, numClasses)
+    img = cv2.putText(img, "fps: %.1f" % fps, (10, 20), 
+        cv2.FONT_HERSHEY_SIMPLEX, 0.5, (255, 255, 255), 1)
 
     return img
 
